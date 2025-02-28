@@ -7,6 +7,12 @@ app = Flask(__name__)
 DOWNLOAD_FOLDER = "downloads"
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
+# Load YouTube cookies from environment variable
+cookies = os.getenv("COOKIES")
+if cookies:
+    with open("cookies.txt", "w") as f:
+        f.write(cookies)
+
 @app.route("/download", methods=["POST"])
 def download():
     data = request.json
@@ -23,7 +29,8 @@ def download():
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
                 'preferredquality': '192',
-            }]
+            }],
+            'cookiefile': 'cookies.txt' if cookies else None  # Use cookies if available
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
