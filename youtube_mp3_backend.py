@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, send_file
 import yt_dlp
 import os
-import subprocess
+from moviepy.editor import AudioFileClip
 
 app = Flask(__name__)
 DOWNLOAD_FOLDER = "downloads"
@@ -25,19 +25,25 @@ def download():
         ydl_opts = {
             'format': 'bestaudio',
             'outtmpl': f'{DOWNLOAD_FOLDER}/%(title)s.%(ext)s',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            }],
             'cookiefile': 'cookies.txt' if cookies else None  # Use cookies if available
         }
         
+        # Download the video/audio file using yt-dlp
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=True)
-            filename = ydl.prepare_filename(info).replace(".webm", ".mp3").replace(".m4a", ".mp3")
+            filename = ydl.prepare_filename(info)
         
-        return send_file(filename, as_attachment=True)
+        # Convert the downloaded file to MP3 using MoviePy
+        audio = AudioFileClip(filename)
+        mp3_filename = filename.rsplit('.', 1)[0] + ".mp3"
+        audio.write_audiofile(mp3_filename, codec='mp3')
+        
+        # Clean up the original file (optional)
+        os.remove(filename)
+
+        # Return the MP3 file
+        return send_file(mp3_filename, as_attachment=True)
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
